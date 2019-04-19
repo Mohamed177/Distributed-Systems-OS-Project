@@ -8,28 +8,37 @@ mydb = myclient["DATABASE"]
 
 mycol = mydb["users"]
 
-portRep = "5555"
-portPub = "5556"
+portRep = "5555" #take response from client
+portPub = "5556" #published socket
 
-if len(sys.argv) > 1:
-    port =  sys.argv[1]
-    int(port)
 
 context = zmq.Context()
+
 socket = context.socket(zmq.REP)
 socket.bind("tcp://*:%s" % portRep)
 
 socketPub = context.socket(zmq.PUB)
 socketPub.bind("tcp://*:%s" % portPub)
 
+
+def check(record):  # master port
+
+    x = mycol.find_one(record)
+    if x != None:
+        socket.send_string("you are already signed up ,pls log in.")
+    else:
+        y = mycol.insert_one(record)
+        print(y.inserted_id)
+        socket.send_string("signed up succeeded")
+        socketPub.send_pyobj(mydict)
+
+
 while True:
     # Wait for next request from client
     mydict = socket.recv_pyobj()
     print(mydict)
-    socket.send_string("recieved")
-    #x = mycol.insert_one(mydict)
-    #print(x.inserted_id)
-    # Send Inset Request to all SLAVES
-    socketPub.send_pyobj(mydict)
+
+    check(mydict)
+
 
 
